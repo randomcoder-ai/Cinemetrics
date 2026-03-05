@@ -1,65 +1,173 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import MovieSearch from '@/components/MovieSearch';
+import MovieDetails from '@/components/MovieDetails';
+import SentimentAnalysisComponent from '@/components/SentimentAnalysis';
+import { MovieData, Review, SentimentAnalysis } from '@/types';
+import { Film, AlertCircle, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Home() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [movieData, setMovieData] = useState<MovieData | null>(null);
+  const [sentiment, setSentiment] = useState<SentimentAnalysis | null>(null);
+
+  const handleSearch = async (imdbId: string) => {
+    setIsLoading(true);
+    setError('');
+    setMovieData(null);
+    setSentiment(null);
+
+    try {
+      // Fetch movie data
+      const movieResponse = await fetch(`/api/movie?id=${imdbId}`);
+      const movieResult = await movieResponse.json();
+
+      if (!movieResponse.ok) {
+        throw new Error(movieResult.error || 'Failed to fetch movie data');
+      }
+
+      setMovieData(movieResult.movie);
+
+      // Fetch reviews
+      const reviewsResponse = await fetch(`/api/reviews?id=${imdbId}`);
+      const reviewsResult = await reviewsResponse.json();
+
+      let reviews: Review[] = [];
+      if (reviewsResponse.ok && reviewsResult.reviews) {
+        reviews = reviewsResult.reviews;
+      }
+
+      // Analyze sentiment
+      if (reviews.length > 0) {
+        const sentimentResponse = await fetch('/api/sentiment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ reviews }),
+        });
+
+        const sentimentResult = await sentimentResponse.json();
+        if (sentimentResponse.ok) {
+          setSentiment(sentimentResult.sentiment);
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-[#0a0e1a] relative overflow-hidden">
+      {/* Subtle Background Pattern */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(6,182,212,0.08),transparent_50%)]" />
+      
+      {/* Navigation Bar */}
+      <nav className="relative z-50 border-b border-white/5 bg-[#0a0e1a]/80 backdrop-blur-md">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-7 h-7 text-cyan-400" />
+            <h1 className="text-2xl font-bold text-white tracking-tight">
+              CineMetrics
+            </h1>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      </nav>
+
+      {/* Content */}
+      <div className="relative z-10 container mx-auto px-6 py-8">
+        {/* Hero Section */}
+        {!movieData && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center py-16"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <h2 className="text-5xl md:text-6xl font-bold text-white mb-4">
+              Discover Movie{' '}
+              <span className="bg-linear-to-r from-cyan-400 to-blue-400 text-transparent bg-clip-text">
+                Sentiment
+              </span>
+            </h2>
+            <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-12">
+              AI-powered analysis of audience reactions and reviews from IMDb
+            </p>
+            <MovieSearch onSearch={handleSearch} isLoading={isLoading} />
+          </motion.div>
+        )}
+
+        {/* Search Bar When Movie is Displayed */}
+        {movieData && (
+          <div className="mb-8">
+            <MovieSearch onSearch={handleSearch} isLoading={isLoading} />
+          </div>
+        )}
+
+        {/* Error Message */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="max-w-2xl mx-auto mb-6"
+            >
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center gap-3 backdrop-blur-sm">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                <p className="text-red-300 text-sm">{error}</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Results */}
+        <AnimatePresence>
+          {movieData && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-6"
+            >
+              <MovieDetails movie={movieData} />
+              {sentiment && <SentimentAnalysisComponent sentiment={sentiment} />}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Loading State */}
+        {isLoading && !movieData && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-20"
           >
-            Documentation
-          </a>
+            <div className="inline-flex items-center gap-3 bg-white/5 backdrop-blur-sm px-8 py-4 rounded-full border border-white/10">
+              <div className="w-5 h-5 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+              <p className="text-white/90 text-sm font-medium">
+                Analyzing movie sentiment...
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-white/5 mt-20">
+        <div className="container mx-auto px-6 py-8">
+          <div className="text-center text-sm text-gray-500">
+            <p>© 2026 CineMetrics. Powered by OMDb API & Google Gemini AI</p>
+          </div>
         </div>
-      </main>
+      </footer>
     </div>
   );
 }

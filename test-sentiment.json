@@ -1,0 +1,14 @@
+{
+  "reviews": [
+    {
+      "author": "Test User",
+      "rating": 9,
+      "text": "Amazing movie! The performances were outstanding and the story kept me engaged throughout."
+    },
+    {
+      "author": "Another User",
+      "rating": 8,
+      "text": "Great film with excellent cinematography. Highly recommend."
+    }
+  ]
+}
